@@ -4,7 +4,6 @@
 
 import bisect
 import difflib
-from threading import Thread
 from typing import List, Optional
 
 from lsprotocol import types as lsp
@@ -43,12 +42,7 @@ def get_text_edits(
         return lsp.Position(line=line, character=character)
 
     sequences = []
-    try:
-        thread = Thread(target=lambda: sequences.extend(_get_diff(old_text, new_text)))
-        thread.start()
-        thread.join(timeout or DIFF_TIMEOUT)
-    except Exception:
-        pass
+    sequences.extend(_get_diff(old_text, new_text))
 
     if sequences:
         edits = [
