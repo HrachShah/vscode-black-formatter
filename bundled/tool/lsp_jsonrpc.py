@@ -285,7 +285,7 @@ def run_over_json_rpc(
     else:
         data = rpc.receive_data()
 
-    if data["id"] != msg_id:
+    if str(data["id"]) != str(msg_id):
         return RpcRunResult(
             "", f"Invalid result for request: {json.dumps(msg, indent=4)}"
         )
