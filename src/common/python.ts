@@ -14,6 +14,7 @@ export interface IInterpreterDetails {
     resource?: Uri;
 }
 
+
 function convertToResolvedEnvironment(environment: PythonEnvironment): ResolvedEnvironment | undefined {
     const runConfig = environment.execInfo?.activatedRun ?? environment.execInfo?.run;
     const executable = runConfig?.executable;
@@ -43,6 +44,7 @@ function convertToResolvedEnvironment(environment: PythonEnvironment): ResolvedE
     } as ResolvedEnvironment;
 }
 
+
 const onDidChangePythonInterpreterEvent = new EventEmitter<void>();
 export const onDidChangePythonInterpreter: Event<void> = onDidChangePythonInterpreterEvent.event;
 
@@ -54,6 +56,7 @@ async function getPythonExtensionAPI(): Promise<PythonExtension | undefined> {
     _api = await PythonExtension.api();
     return _api;
 }
+
 
 let _envsApi: PythonEnvironmentApi | undefined;
 async function getEnvironmentsExtensionAPI(): Promise<PythonEnvironmentApi | undefined> {
@@ -68,6 +71,7 @@ async function getEnvironmentsExtensionAPI(): Promise<PythonEnvironmentApi | und
     return _envsApi;
 }
 
+
 function sameInterpreter(a: string[], b: string[]): boolean {
     if (a.length !== b.length) {
         return false;
@@ -79,6 +83,7 @@ function sameInterpreter(a: string[], b: string[]): boolean {
     }
     return true;
 }
+
 
 let serverPython: string[] | undefined;
 function checkAndFireEvent(interpreter: string[] | undefined): void {
@@ -99,11 +104,13 @@ function checkAndFireEvent(interpreter: string[] | undefined): void {
     }
 }
 
+
 async function refreshServerPython(): Promise<void> {
     const projectRoot = await getProjectRoot();
     const interpreter = await getInterpreterDetails(projectRoot?.uri);
     checkAndFireEvent(interpreter.path);
 }
+
 
 export async function initializePython(disposables: Disposable[]): Promise<void> {
     try {
@@ -140,19 +147,6 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
     }
 }
 
-// TODO: Unused code
-export async function resolveInterpreter(interpreter: string[]): Promise<ResolvedEnvironment | undefined> {
-    const envsApi = await getEnvironmentsExtensionAPI();
-    if (envsApi) {
-        const environment = await envsApi.resolveEnvironment(Uri.file(interpreter[0]));
-        if (!environment) {
-            return undefined;
-        }
-        return convertToResolvedEnvironment(environment);
-    }
-    const api = await getPythonExtensionAPI();
-    return api?.environments.resolveEnvironment(interpreter[0]);
-}
 
 export async function getInterpreterDetails(resource?: Uri): Promise<IInterpreterDetails> {
     // Prefer the Python Environments extension if it's available, as it provides a more comprehensive view of the available environments.
@@ -195,20 +189,15 @@ export async function getInterpreterDetails(resource?: Uri): Promise<IInterprete
     return { path: undefined, resource };
 }
 
+
 // TODO: The Python Environments extension does not expose a debug API yet; uses legacy ms-python.python
 export async function getDebuggerPath(): Promise<string | undefined> {
     const api = await getPythonExtensionAPI();
     return api?.debug.getDebuggerPackagePath();
 }
 
-// TODO: Unused code
-export async function runPythonExtensionCommand(command: string, ...rest: unknown[]) {
-    const envsApi = await getEnvironmentsExtensionAPI();
-    if (!envsApi) {
-        await getPythonExtensionAPI();
-    }
-    return await commands.executeCommand(command, ...rest);
-}
+
+
 
 export function checkVersion(resolved: ResolvedEnvironment | undefined): boolean {
     const version = resolved?.version;
@@ -221,7 +210,9 @@ export function checkVersion(resolved: ResolvedEnvironment | undefined): boolean
     return false;
 }
 
+
 export function resetCachedApis(): void {
     _api = undefined;
     _envsApi = undefined;
 }
+
