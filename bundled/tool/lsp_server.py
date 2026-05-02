@@ -441,7 +441,10 @@ def _get_document_key(document: TextDocument):
 
 def _get_settings_by_document(document: TextDocument | None):
     if document is None or document.path is None:
-        return list(WORKSPACE_SETTINGS.values())[0]
+        settings_values = list(WORKSPACE_SETTINGS.values())
+        if not settings_values:
+            raise RuntimeError("No workspace settings available")
+        return settings_values[0]
 
     key = _get_document_key(document)
     if key is None:
