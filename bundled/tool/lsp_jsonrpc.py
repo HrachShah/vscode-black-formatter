@@ -291,7 +291,7 @@ def run_over_json_rpc(
         )
 
     if "error" in data:
-        result = data["result"] if "result" in data else ""
+        result = ""
         error = data["error"]
 
         if data.get("exception", False):
