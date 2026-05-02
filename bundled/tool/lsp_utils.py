@@ -84,8 +84,16 @@ def is_current_interpreter(executable: str) -> bool:
 
 def is_stdlib_file(file_path: str) -> bool:
     """Return True if the file belongs to the standard library."""
-    normalized_path = str(pathlib.Path(file_path).resolve())
-    return any(normalized_path.startswith(path) for path in _stdlib_paths)
+    normalized_path = pathlib.Path(file_path).resolve()
+    for stdlib_path in _stdlib_paths:
+        if normalized_path == pathlib.Path(stdlib_path):
+            return True
+        try:
+            normalized_path.relative_to(stdlib_path)
+            return True
+        except ValueError:
+            pass
+    return False
 
 
 def _get_relative_path(file_path: str, workspace_root: str) -> str:
