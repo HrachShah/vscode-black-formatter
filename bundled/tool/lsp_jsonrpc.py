@@ -181,7 +181,8 @@ class ProcessManager:
                     del self._processes[workspace]
                     rpc = self._rpc.pop(workspace)
                     rpc.close()
-                except:  # pylint: disable=bare-except
+                except LookupError:
+                    # workspace key was already removed from _processes or _rpc
                     pass
 
         self._thread_pool.submit(_monitor_process)
