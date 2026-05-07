@@ -71,7 +71,7 @@ class LspSession(MethodDispatcher):
         self.shutdown(True)
         try:
             self._sub.terminate()
-        except Exception:
+        except (ProcessLookupError, PermissionError, OSError):
             pass
         self._endpoint.shutdown()
         self._thread_pool.shutdown()
