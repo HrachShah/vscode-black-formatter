@@ -256,7 +256,7 @@ def _get_line_endings(lines: list[str]) -> str:
         if lines[0][-2:] == "\r\n":
             return "\r\n"
         return "\n"
-    except Exception:  # pylint: disable=broad-except
+    except (IndexError, TypeError):  # pylint: disable=broad-except
         return None
 
 
