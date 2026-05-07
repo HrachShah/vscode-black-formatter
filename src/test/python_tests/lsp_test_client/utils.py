@@ -56,7 +56,7 @@ def install_packages(packages: List[str]):
             subprocess.run(
                 [sys.executable, "-m", "pip", "uninstall", "-y"] + packages, check=True
             )
-        except Exception:
+        except (subprocess.CalledProcessError, OSError):
             pass
 
 
