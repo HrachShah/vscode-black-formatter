@@ -271,7 +271,7 @@ def run_over_json_rpc(
         def _receive():
             try:
                 result_container[0] = rpc.receive_data()
-            except Exception as e:
+            except (ValueError, OSError) as e:
                 error_container[0] = e
 
         recv_thread = threading.Thread(target=_receive, daemon=True)
