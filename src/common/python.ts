@@ -142,7 +142,7 @@ export async function initializePython(disposables: Disposable[]): Promise<void>
             traceLog('Waiting for interpreter from Python extension.');
             await refreshServerPython();
         }
-    } catch (error) {
+    } catch (error: unknown) {
         traceError('Error initializing Python: ', error);
     }
 }
@@ -172,7 +172,7 @@ export async function getInterpreterDetails(resource?: Uri): Promise<IInterprete
                 return { path: undefined, resource };
             }
             // No environment found via envs API, fall through to legacy resolver.
-        } catch (error) {
+        } catch (error: unknown) {
             traceError('Error getting interpreter from Python environments extension: ', error);
             // Fall through to legacy resolver.
         }
