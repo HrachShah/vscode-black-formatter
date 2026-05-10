@@ -44,7 +44,7 @@ export async function getEnvFileVars(workspace: WorkspaceFolder): Promise<Record
             traceLog(`Loaded ${Object.keys(vars).length} env vars from ${envFilePath}`);
             return vars;
         }
-    } catch (ex) {
+    } catch (ex: unknown) {
         traceWarn(`Failed to read env file ${envFilePath}: ${ex}`);
     }
     return {};

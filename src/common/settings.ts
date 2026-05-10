@@ -215,7 +215,7 @@ export function logLegacySettings(): void {
                 traceWarn(`"python.formatting.blackPath" for workspace ${workspace.uri.fsPath}:`);
                 traceWarn(`\n${JSON.stringify(legacyPath, null, 4)}`);
             }
-        } catch (err) {
+        } catch (err: unknown) {
             traceWarn(`Error while logging legacy settings: ${err}`);
         }
     });
