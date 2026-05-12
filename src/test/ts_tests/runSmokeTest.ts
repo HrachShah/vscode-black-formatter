@@ -35,7 +35,7 @@ async function main() {
             if (installResult.status !== 0) {
                 console.error(`Python extension installation failed with exit code: ${installResult.status}`);
             }
-        } catch (e) {
+        } catch (e: unknown) {
             console.error('Exception thrown during spawnSync:', e);
         }
 
@@ -48,7 +48,7 @@ async function main() {
             extensionTestsEnv: { SMOKE_TESTS: 'true' },
             launchArgs: [TEST_PROJECT_DIR],
         });
-    } catch (err) {
+    } catch (err: unknown) {
         console.error('Failed to run tests');
         console.error(err);
         process.exit(1);

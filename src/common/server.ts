@@ -107,7 +107,7 @@ export async function restartServer(
         traceInfo(`Server: Stop requested`);
         try {
             await oldLsClient.stop();
-        } catch (ex) {
+        } catch (ex: unknown) {
             traceError(`Server: Stop failed: ${ex}`);
         }
     }
@@ -140,7 +140,7 @@ export async function restartServer(
     );
     try {
         await newLSClient.start();
-    } catch (ex) {
+    } catch (ex: unknown) {
         updateStatus(l10n.t('Server failed to start.'), LanguageStatusSeverity.Error);
         traceError(`Server: Start failed: ${ex}`);
     }

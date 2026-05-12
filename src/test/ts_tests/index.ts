@@ -32,7 +32,7 @@ export function run(): Promise<void> {
                     c();
                 }
             });
-        } catch (err) {
+        } catch (err: unknown) {
             console.error(err);
             e(err);
         }

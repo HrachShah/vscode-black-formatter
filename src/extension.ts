@@ -118,7 +118,7 @@ export async function deactivate(): Promise<void> {
     if (lsClient) {
         try {
             await lsClient.stop();
-        } catch (ex) {
+        } catch (ex: unknown) {
             traceError(`Server: Stop failed: ${ex}`);
         }
     }
