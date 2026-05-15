@@ -12,7 +12,20 @@ export interface IServerInfo {
 
 export function loadServerDefaults(): IServerInfo {
     const packageJson = path.join(EXTENSION_ROOT_DIR, 'package.json');
-    const content = fs.readFileSync(packageJson).toString();
-    const config = JSON.parse(content);
-    return config.serverInfo as IServerInfo;
+    let content: string;
+    try {
+        content = fs.readFileSync(packageJson).toString();
+    } catch (err: unknown) {
+        throw new Error(`Failed to read package.json at ${packageJson}: ${err}`);
+    }
+    let config: { serverInfo?: IServerInfo };
+    try {
+        config = JSON.parse(content);
+    } catch (err: unknown) {
+        throw new Error(`Failed to parse package.json at ${packageJson}: ${err}`);
+    }
+    if (!config.serverInfo) {
+        throw new Error(`package.json at ${packageJson} is missing the 'serverInfo' field`);
+    }
+    return config.serverInfo;
 }
