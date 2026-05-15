@@ -65,7 +65,8 @@ async function getEnvironmentsExtensionAPI(): Promise<PythonEnvironmentApi | und
     }
     try {
         _envsApi = await PythonEnvironments.api();
-    } catch {
+    } catch (err: unknown) {
+        traceError(`Python Environments extension API unavailable: ${err}`);
         return undefined;
     }
     return _envsApi;
