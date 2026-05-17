@@ -43,9 +43,9 @@ async function createServer(
     ) ?? { uri: workspaceUri, name: path.basename(workspaceUri.fsPath), index: 0 };
     const envFileVars = await getEnvFileVars(workspaceFolder);
 
-    // Build environment: .env provides defaults, system env wins for conflicts.
+    // Build environment: system env provides defaults, .env wins for conflicts.
     // Path-like variables are appended rather than overridden.
-    const newEnv = { ...envFileVars, ...process.env };
+    const newEnv = { ...process.env, ...envFileVars };
 
     // Append .env PYTHONPATH/PATH to system values instead of replacing
     for (const pathVar of ['PYTHONPATH', 'PATH']) {
