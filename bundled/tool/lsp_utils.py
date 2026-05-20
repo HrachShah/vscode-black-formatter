@@ -242,14 +242,18 @@ def run_path(
 ) -> RunResult:
     """Runs as an executable."""
     if use_stdin:
-        with subprocess.Popen(
-            argv,
-            encoding="utf-8",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdin=subprocess.PIPE,
-            cwd=cwd,
-        ) as process:
+        try:
+            process = subprocess.Popen(
+                argv,
+                encoding="utf-8",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE,
+                cwd=cwd,
+            )
+        except OSError as e:
+            return RunResult("", f"failed to start process: {e}", 1)
+        with process:
             try:
                 return RunResult(*process.communicate(input=source, timeout=timeout))
             except subprocess.TimeoutExpired:
