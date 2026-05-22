@@ -27,10 +27,11 @@ export function updateStatus(
     busy?: boolean,
     detail?: string,
 ): void {
-    if (_status) {
-        _status.text = status && status.length > 0 ? `${_status.name}: ${status}` : `${_status.name}`;
-        _status.severity = severity;
-        _status.busy = busy ?? false;
-        _status.detail = detail;
+    if (!_status) {
+        return;
     }
+    _status.text = status && status.length > 0 ? `${_status.name}: ${status}` : `${_status.name}`;
+    _status.severity = severity;
+    _status.busy = busy ?? false;
+    _status.detail = detail;
 }
