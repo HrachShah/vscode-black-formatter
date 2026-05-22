@@ -47,7 +47,7 @@ def get_text_edits(
         thread = Thread(target=lambda: sequences.extend(_get_diff(old_text, new_text)))
         thread.start()
         thread.join(timeout or DIFF_TIMEOUT)
-    except Exception:
+    except (TypeError, OSError):
         pass
 
     if sequences:

@@ -137,12 +137,12 @@ class ProcessManager:
                 try:
                     proc.kill()
                     proc.wait(timeout=5)
-                except Exception:
+                except OSError:
                     pass
                 del self._processes[workspace]
             if workspace in self._rpc:
                 rpc = self._rpc.pop(workspace)
-                with contextlib.suppress(Exception):
+                with contextlib.suppress(OSError):
                     rpc.close()
 
     def stop_all_processes(self):
@@ -270,7 +270,7 @@ def run_over_json_rpc(
         def _receive():
             try:
                 result_container[0] = rpc.receive_data()
-            except Exception as e:
+            except (OSError, ValueError, EOFError) as e:
                 error_container[0] = e
 
         recv_thread = threading.Thread(target=_receive, daemon=True)
