@@ -614,7 +614,7 @@ def _run_tool_on_document(
                     source=document.source,
                     timeout=FORMATTING_TIMEOUT,
                 )
-            except Exception:
+            except (ValueError, TypeError, OSError):
                 log_error(traceback.format_exc(chain=True))
                 raise
         if result.stderr:
@@ -698,7 +698,7 @@ def _run_tool(extra_args: Sequence[str], settings: Dict[str, Any]) -> utils.RunR
                     cwd=cwd,
                     timeout=FORMATTING_TIMEOUT,
                 )
-            except Exception:
+            except (ValueError, TypeError, OSError):
                 log_error(traceback.format_exc(chain=True))
                 raise
         if result.stderr:
