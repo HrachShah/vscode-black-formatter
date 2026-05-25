@@ -137,7 +137,7 @@ class ProcessManager:
                 try:
                     proc.kill()
                     proc.wait(timeout=5)
-                except Exception:
+                except OSError:
                     pass
                 del self._processes[workspace]
             if workspace in self._rpc:
