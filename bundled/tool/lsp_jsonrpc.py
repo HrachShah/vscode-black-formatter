@@ -137,7 +137,7 @@ class ProcessManager:
                 try:
                     proc.kill()
                     proc.wait(timeout=5)
-                except Exception:
+                except (OSError, subprocess.TimeoutExpired):
                     pass
                 del self._processes[workspace]
             if workspace in self._rpc:
@@ -270,7 +270,7 @@ def run_over_json_rpc(
         def _receive():
             try:
                 result_container[0] = rpc.receive_data()
-            except Exception as e:
+            except (StreamClosedException, EOFError, json.JSONDecodeError) as e:
                 error_container[0] = e
 
         recv_thread = threading.Thread(target=_receive, daemon=True)
