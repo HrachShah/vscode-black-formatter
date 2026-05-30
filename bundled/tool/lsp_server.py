@@ -256,7 +256,8 @@ def _get_line_endings(lines: list[str]) -> str:
         if lines[0][-2:] == "\r\n":
             return "\r\n"
         return "\n"
-    except Exception:  # pylint: disable=broad-except
+    except (IndexError, TypeError):  # pylint: disable=broad-except
+        # IndexError: lines list was empty (splitlines returned [])  # TypeError: lines[0] was not a string (e.g., bytes from binary read)
         return None
 
 
@@ -614,7 +615,7 @@ def _run_tool_on_document(
                     source=document.source,
                     timeout=FORMATTING_TIMEOUT,
                 )
-            except Exception:
+            except OSError:
                 log_error(traceback.format_exc(chain=True))
                 raise
         if result.stderr:
@@ -698,7 +699,7 @@ def _run_tool(extra_args: Sequence[str], settings: Dict[str, Any]) -> utils.RunR
                     cwd=cwd,
                     timeout=FORMATTING_TIMEOUT,
                 )
-            except Exception:
+            except OSError:
                 log_error(traceback.format_exc(chain=True))
                 raise
         if result.stderr:
