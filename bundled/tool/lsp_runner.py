@@ -61,7 +61,7 @@ while not EXIT_NOW:
                     cwd=msg["cwd"],
                     source=msg["source"] if "source" in msg else None,
                 )
-            except Exception:  # pylint: disable=broad-except
+            except (OSError, ValueError, TypeError):  # pylint: disable=broad-except
                 result = utils.RunResult("", traceback.format_exc(chain=True))
                 is_exception = True  # pylint: disable=invalid-name
 
