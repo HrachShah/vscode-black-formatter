@@ -8,6 +8,7 @@ import os
 import pathlib
 import sys
 import traceback
+import subprocess
 
 
 # **********************************************************
@@ -61,7 +62,7 @@ while not EXIT_NOW:
                     cwd=msg["cwd"],
                     source=msg["source"] if "source" in msg else None,
                 )
-            except Exception:  # pylint: disable=broad-except
+            except (subprocess.CalledProcessError, ValueError, TypeError):
                 result = utils.RunResult("", traceback.format_exc(chain=True))
                 is_exception = True  # pylint: disable=invalid-name
 
