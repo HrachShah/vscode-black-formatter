@@ -81,7 +81,14 @@ function resolveVariables(
 
     return modifiedValue.map((s) => {
         for (const [key, value] of substitutions) {
-            s = s.replace(key, value);
+            // Use a function replacer so the substitution value is inserted
+            // verbatim. String arguments to replace() treat $-sequences in
+            // the replacement ($&, $1..$9, $`, $', $$) as back-references,
+            // so a $& or $1 in an env var value would otherwise be expanded
+            // against the just-matched text. Also use the /g flag so every
+            // occurrence of the same variable on one line is replaced, not
+            // just the first.
+            s = s.replace(key, () => value);
         }
         return s;
     });
