@@ -421,3 +421,191 @@ class TestRemapDiagnosticsToCells:
         # Guard should ensure end >= start
         assert d.range.end.line == 2
         assert d.range.end.character == 5  # guard sets end = start position
+
+
+# ===================================================================
+# _remap_range_into_cell
+# ===================================================================
+
+
+class TestRemapRangeIntoCell:
+    """Tests for the _remap_range_into_cell helper."""
+
+    def test_shifts_start_and_end_lines_by_cell_offset(self):
+        # Cell 1 starts at line 3 in combined source.
+        entry = lsp_notebook.CellOffset("cell:1", start_line=3, line_count=2)
+        rng = lsp.Range(
+            start=lsp.Position(line=4, character=2),
+            end=lsp.Position(line=4, character=7),
+        )
+        out = lsp_notebook._remap_range_into_cell(entry, rng)
+        assert out.start.line == 1  # 4 - 3
+        assert out.start.character == 2
+        assert out.end.line == 1
+        assert out.end.character == 7
+
+    def test_clamps_end_line_to_cell_boundary(self):
+        # Cell 0 has 3 lines (0,1,2). End line 10 is way outside.
+        entry = lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3)
+        rng = lsp.Range(
+            start=lsp.Position(line=1, character=0),
+            end=lsp.Position(line=10, character=5),
+        )
+        out = lsp_notebook._remap_range_into_cell(entry, rng)
+        # End should clamp to line 2 (max_end_line) and character 0.
+        assert out.end.line == 2
+        assert out.end.character == 0
+
+    def test_inverted_range_collapsed_to_start(self):
+        entry = lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3)
+        # Start at (2, 5), end clamps to (2, 0) — would be inverted.
+        rng = lsp.Range(
+            start=lsp.Position(line=2, character=5),
+            end=lsp.Position(line=10, character=3),
+        )
+        out = lsp_notebook._remap_range_into_cell(entry, rng)
+        assert out.start.line == 2
+        assert out.start.character == 5
+        assert out.end.line == 2
+        assert out.end.character == 5  # collapsed to start
+
+
+# ===================================================================
+# _remap_related_information
+# ===================================================================
+
+
+def _related(start_line: int, start_char: int, end_line: int, end_char: int,
+             uri: str = "vscode-notebook-cell://combined", message: str = "see also"):
+    return lsp.DiagnosticRelatedInformation(
+        location=lsp.Location(
+            uri=uri,
+            range=lsp.Range(
+                start=lsp.Position(line=start_line, character=start_char),
+                end=lsp.Position(line=end_line, character=end_char),
+            ),
+        ),
+        message=message,
+    )
+
+
+class TestRemapRelatedInformation:
+    """Tests for the _remap_related_information helper."""
+
+    def test_none_is_returned_unchanged(self):
+        assert lsp_notebook._remap_related_information(None, []) is None
+
+    def test_empty_list_is_returned_unchanged(self):
+        assert lsp_notebook._remap_related_information([], []) == []
+
+    def test_rewrites_uri_to_owning_cell(self):
+        cell_map = [
+            lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3),
+            lsp_notebook.CellOffset("cell:1", start_line=3, line_count=2),
+        ]
+        info = _related(4, 0, 4, 5)  # line 4 belongs to cell:1
+        out = lsp_notebook._remap_related_information([info], cell_map)
+        assert out is not None
+        assert len(out) == 1
+        assert out[0].location.uri == "cell:1"
+        # Range shifted into cell:1's local coordinates.
+        assert out[0].location.range.start.line == 1  # 4 - 3
+        assert out[0].location.range.end.line == 1
+
+    def test_drops_locations_outside_all_cells(self):
+        cell_map = [
+            lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3),
+        ]
+        # Line 99 is way outside the cell map.
+        info = _related(99, 0, 99, 5)
+        out = lsp_notebook._remap_related_information([info], cell_map)
+        assert out == []
+
+    def test_clamps_end_line_in_related_info(self):
+        cell_map = [
+            lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3),
+        ]
+        # Start inside cell:0, end outside.
+        info = _related(1, 0, 10, 5)
+        out = lsp_notebook._remap_related_information([info], cell_map)
+        assert out is not None and len(out) == 1
+        # End clamped to line 2, char 0.
+        assert out[0].location.range.end.line == 2
+        assert out[0].location.range.end.character == 0
+
+    def test_mixed_in_and_out_locations(self):
+        cell_map = [
+            lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3),
+            lsp_notebook.CellOffset("cell:1", start_line=3, line_count=2),
+        ]
+        in_cell0 = _related(0, 0, 0, 4, message="in cell 0")
+        in_cell1 = _related(3, 0, 3, 4, message="in cell 1")
+        out_of_range = _related(99, 0, 99, 4, message="nowhere")
+        result = lsp_notebook._remap_related_information(
+            [in_cell0, in_cell1, out_of_range], cell_map
+        )
+        assert result is not None
+        assert len(result) == 2  # the out-of-range one is dropped
+        assert result[0].message == "in cell 0"
+        assert result[0].location.uri == "cell:0"
+        assert result[1].message == "in cell 1"
+        assert result[1].location.uri == "cell:1"
+
+    def test_preserves_message(self):
+        cell_map = [lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3)]
+        info = _related(0, 0, 0, 1, message="custom message")
+        out = lsp_notebook._remap_related_information([info], cell_map)
+        assert out is not None and out[0].message == "custom message"
+
+
+# ===================================================================
+# remap_diagnostics_to_cells: related_information integration
+# ===================================================================
+
+
+class TestRemapDiagnosticsRelatedInfo:
+    """The combined source has cells 0 (lines 0-2) and 1 (lines 3-4).
+    A diagnostic on cell 0 line 1 with related_information pointing to
+    a combined-source location must be remapped so the related location
+    has the correct URI and cell-local coordinates."""
+
+    @pytest.fixture()
+    def cell_map(self) -> lsp_notebook.CellMap:
+        return [
+            lsp_notebook.CellOffset("cell:0", start_line=0, line_count=3),
+            lsp_notebook.CellOffset("cell:1", start_line=3, line_count=2),
+        ]
+
+    def test_related_info_uri_is_remapped(self, cell_map):
+        diag = _diag(1, 0, 1, 5)
+        diag.related_information = [_related(4, 0, 4, 3)]  # points to cell:1
+        result = lsp_notebook.remap_diagnostics_to_cells([diag], cell_map)
+        assert len(result["cell:0"]) == 1
+        remapped = result["cell:0"][0]
+        assert remapped.related_information is not None
+        assert len(remapped.related_information) == 1
+        assert remapped.related_information[0].location.uri == "cell:1"
+        # Range shifted into cell:1's local coordinates.
+        assert remapped.related_information[0].location.range.start.line == 1
+        assert remapped.related_information[0].location.range.end.line == 1
+
+    def test_related_info_outside_all_cells_is_dropped(self, cell_map):
+        diag = _diag(1, 0, 1, 5)
+        diag.related_information = [_related(99, 0, 99, 3)]
+        result = lsp_notebook.remap_diagnostics_to_cells([diag], cell_map)
+        remapped = result["cell:0"][0]
+        assert remapped.related_information == []
+
+    def test_related_info_none_is_preserved(self, cell_map):
+        diag = _diag(1, 0, 1, 5)
+        diag.related_information = None
+        result = lsp_notebook.remap_diagnostics_to_cells([diag], cell_map)
+        remapped = result["cell:0"][0]
+        assert remapped.related_information is None
+
+    def test_related_info_empty_list_is_preserved(self, cell_map):
+        diag = _diag(1, 0, 1, 5)
+        diag.related_information = []
+        result = lsp_notebook.remap_diagnostics_to_cells([diag], cell_map)
+        remapped = result["cell:0"][0]
+        assert remapped.related_information == []

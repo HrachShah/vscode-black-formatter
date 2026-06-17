@@ -130,6 +130,79 @@ def get_cell_for_line(global_line: int, cell_map: CellMap) -> CellOffset | None:
     return None
 
 
+def _remap_range_into_cell(
+    cell_entry: CellOffset,
+    original_range: lsp.Range,
+) -> lsp.Range:
+    """Translate a range in combined-source coordinates into a cell's local
+    coordinates.  ``cell_entry`` is the cell the location belongs to.
+    The end line is clamped to the last line of the cell; the start line
+    is assumed to be inside the cell (the caller has already checked
+    that).
+    """
+    local_start_line = original_range.start.line - cell_entry.start_line
+    local_start = lsp.Position(
+        line=local_start_line,
+        character=original_range.start.character,
+    )
+
+    max_end_line = cell_entry.line_count - 1
+    raw_end_line = original_range.end.line - cell_entry.start_line
+    clamped = raw_end_line > max_end_line
+    local_end_line = min(raw_end_line, max_end_line)
+    local_end = lsp.Position(
+        line=local_end_line,
+        character=0 if clamped else original_range.end.character,
+    )
+
+    # Ensure end is not before start (inverted range violates LSP spec)
+    if (
+        local_end.line == local_start.line
+        and local_end.character < local_start.character
+    ):
+        local_end = lsp.Position(
+            line=local_start.line, character=local_start.character
+        )
+
+    return lsp.Range(start=local_start, end=local_end)
+
+
+def _remap_related_information(
+    related_info: Sequence[lsp.DiagnosticRelatedInformation] | None,
+    cell_map: CellMap,
+) -> list[lsp.DiagnosticRelatedInformation] | None:
+    """Remap the ``related_information`` list to per-cell coordinates.
+
+    Each entry's location is rewritten: the URI becomes the URI of the
+    cell that owns the location's start line, and the range is shifted
+    to that cell's local coordinates (with the end clamped to the cell
+    boundary, matching :func:`_remap_range_into_cell`).  Entries that
+    fall outside every cell are dropped.  ``None`` and empty inputs are
+    returned unchanged.
+    """
+    if not related_info:
+        return related_info
+
+    remapped: list[lsp.DiagnosticRelatedInformation] = []
+    for info in related_info:
+        location = info.location
+        owner = get_cell_for_line(location.range.start.line, cell_map)
+        if owner is None:
+            # The location is outside every cell — drop it.  This matches
+            # the per-diagnostic behaviour where a diagnostic whose start
+            # line is outside all cells is discarded.
+            continue
+        new_range = _remap_range_into_cell(owner, location.range)
+        new_location = lsp.Location(uri=owner.cell_uri, range=new_range)
+        remapped.append(
+            lsp.DiagnosticRelatedInformation(
+                location=new_location,
+                message=info.message,
+            )
+        )
+    return remapped
+
+
 def remap_diagnostics_to_cells(
     diagnostics: Sequence[lsp.Diagnostic],
     cell_map: CellMap,
@@ -149,42 +222,23 @@ def remap_diagnostics_to_cells(
         if entry is None:
             continue
 
-        local_start_line = diag.range.start.line - entry.start_line
-        local_start = lsp.Position(
-            line=local_start_line,
-            character=diag.range.start.character,
-        )
-
-        # Clamp end line to the cell boundary (defensive).
-        max_end_line = entry.line_count - 1
-        raw_end_line = diag.range.end.line - entry.start_line
-        clamped = raw_end_line > max_end_line
-        local_end_line = min(raw_end_line, max_end_line)
-        local_end = lsp.Position(
-            line=local_end_line,
-            character=0 if clamped else diag.range.end.character,
-        )
-
-        # Ensure end is not before start (inverted range violates LSP spec)
-        if (
-            local_end.line == local_start.line
-            and local_end.character < local_start.character
-        ):
-            local_end = lsp.Position(
-                line=local_start.line, character=local_start.character
-            )
+        local_range = _remap_range_into_cell(entry, diag.range)
 
         remapped = lsp.Diagnostic(
-            range=lsp.Range(start=local_start, end=local_end),
+            range=local_range,
             message=diag.message,
             severity=diag.severity,
             code=diag.code,
             code_description=diag.code_description,
             source=diag.source,
-            # TODO: remap related_information locations through cell_map when a tool
-            # starts emitting them; forwarding raw combined-source positions produces
-            # incorrect navigation targets.
-            related_information=diag.related_information,
+            # Remap related_information through the same cell_map so each
+            # location's URI becomes the URI of the cell that owns the
+            # location and the range is shifted into that cell's local
+            # coordinates.  Locations that don't fall in any cell are
+            # dropped.  See ``_remap_related_information`` for details.
+            related_information=_remap_related_information(
+                diag.related_information, cell_map
+            ),
             tags=diag.tags,
             data=diag.data,
         )
