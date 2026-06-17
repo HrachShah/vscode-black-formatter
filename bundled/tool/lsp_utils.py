@@ -83,9 +83,29 @@ def is_current_interpreter(executable: str) -> bool:
 
 
 def is_stdlib_file(file_path: str) -> bool:
-    """Return True if the file belongs to the standard library."""
-    normalized_path = str(pathlib.Path(file_path).resolve())
-    return any(normalized_path.startswith(path) for path in _stdlib_paths)
+    """Return True if the file belongs to the standard library.
+
+    The match is anchored on a directory boundary so that a stdlib path
+    like ``/usr/lib/python3.12`` does not match a sibling path
+    ``/usr/lib/python3.12_backup/foo.py`` -- the previous bare
+    ``startswith`` test treated the prefix string as a complete prefix
+    without checking that the next character in ``file_path`` was a path
+    separator, so any user-controllable path that just happened to start
+    with the same characters as a stdlib directory would be (mis)classified
+    as a stdlib file. Callers in this module use the result to decide
+    whether to apply lints / refactors / auto-imports, so a false positive
+    silently disables that behaviour for files that are definitely not
+    stdlib code.
+    """
+    normalized_path = pathlib.Path(file_path).resolve()
+    for stdlib_path in _stdlib_paths:
+        stdlib_root = pathlib.PurePath(stdlib_path)
+        try:
+            normalized_path.relative_to(stdlib_root)
+        except ValueError:
+            continue
+        return True
+    return False
 
 
 def _get_relative_path(file_path: str, workspace_root: str) -> str:
