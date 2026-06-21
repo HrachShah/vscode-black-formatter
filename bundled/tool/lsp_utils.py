@@ -251,11 +251,11 @@ def run_path(
             cwd=cwd,
         ) as process:
             try:
-                return RunResult(*process.communicate(input=source, timeout=timeout))
+                stdout, stderr = process.communicate(input=source, timeout=timeout)
             except subprocess.TimeoutExpired:
                 process.kill()
-                process.communicate()
-                raise
+                stdout, stderr = process.communicate()
+            return RunResult(stdout, stderr, process.returncode)
     else:
         result = subprocess.run(
             argv,
@@ -266,7 +266,7 @@ def run_path(
             cwd=cwd,
             timeout=timeout,
         )
-        return RunResult(result.stdout, result.stderr)
+        return RunResult(result.stdout, result.stderr, result.returncode)
 
 
 def run_api(
