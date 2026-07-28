@@ -79,7 +79,7 @@ def main(package_json: pathlib.Path, argv: Sequence[str]) -> None:
         )
 
     print(f"Updating build FROM: {package['version']}")
-    if args.build_id:
+    if args.build_id is not None:
         # If build id is provided it should fall within the 0-INT32 max range
         # that the max allowed value for publishing to the Marketplace.
         if args.build_id < 0 or (

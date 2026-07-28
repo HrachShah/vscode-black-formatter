@@ -50,6 +50,7 @@ def test_invalid_args(tmp_path, version, args):
     "version, args, expected",
     [
         ("1.1.0-rc", ["--build-id", "12345"], ("1", "1", "12345", "rc")),
+        ("1.1.0-rc", ["--build-id", "0"], ("1", "1", "0", "rc")),
         ("1.0.0-rc", ["--release", "--build-id", "12345"], ("1", "0", "12345", "")),
         (
             "1.1.0-rc",
